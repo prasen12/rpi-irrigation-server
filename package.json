@@ -1,0 +1,32 @@
+{
+  "name": "rpi-irrigation-server",
+  "version": "0.0.1",
+  "description": "Irrigation controller server for Raspberry Pi",
+  "main": "main.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prasen12/rpi-irrigation-server.git"
+  },
+  "author": "Prasen Palvankar",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/prasen12/rpi-irrigation-server/issues"
+  },
+  "homepage": "https://github.com/prasen12/rpi-irrigation-server#readme",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "express": "^4.16.3",
+    "log4js": "^2.10.0",
+    "morgan": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.17.0",
+    "@types/express": "^4.16.0",
+    "@types/log4js": "^2.3.5",
+    "@types/morgan": "^1.7.35",
+    "@types/node": "^10.5.2",
+    "ts-loader": "^4.4.2",
+    "typescript": "^2.9.2"
+  }
+}

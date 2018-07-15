@@ -59,3 +59,9 @@ typings/
 
 # next.js build output
 .next
+
+# build/generated file
+dist/
+
+# temp files
+tmp/

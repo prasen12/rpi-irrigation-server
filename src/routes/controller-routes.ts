@@ -33,7 +33,7 @@
 
 
 import * as express from 'express';
-import { RouteHandler, Operations } from '../route-handler';
+import { RouteHandler, Operations } from '../app-server/route-handler';
 import * as log4js from 'log4js';
 import { IrrigationController } from '../controllers/irrigation-controller';
 
@@ -54,12 +54,7 @@ export class ControllerRoutes extends RouteHandler {
         this.setHandler(Operations.GET, '/stations', this.handleGetStations.bind(this));
         this.setHandler(Operations.GET, '/stations/:id/status', this.handleGetStationStatus.bind(this));
         this.setHandler(Operations.PUT, '/stations/:id/operation', this.handleStationOperation.bind(this));
-        this.irrigationController = new IrrigationController();
-        try {
-            this.irrigationController.init();
-        } catch {
-        }
-
+        this.irrigationController = IrrigationController.getInstance();
     }
 
     
@@ -117,6 +112,7 @@ export class ControllerRoutes extends RouteHandler {
      */
     private handleStationOperation(req: express.Request, res: express.Response) {
         this.logger.debug(`handleStationOperation(${req.params.id})`);
+        console.log(req.body);
         if ((!req.body.action) || ((req.body.action.toLowerCase() !== 'on') && (req.body.action.toLowerCase() !== 'off'))) {
             res.status(403).json({
                 status: "ERROR",
@@ -125,12 +121,13 @@ export class ControllerRoutes extends RouteHandler {
             return;
         }
         try {
-            this.irrigationController.switchOnOff(req.params.id, req.body.action.toLoweCase() === 'on');
+            this.irrigationController.switchOnOff(req.params.id, req.body.action.toLowerCase() === 'on');
             res.status(201).json({
                 status: "OK",
                 data: {stationId: req.params.id, status: req.body.action}
             });
         } catch (error) {
+            this.logger.error(error);
             res.status(500).json({
                 status: "ERROR",
                 error: error

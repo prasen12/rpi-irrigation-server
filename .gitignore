@@ -65,3 +65,6 @@ dist/
 
 # temp files
 tmp/
+
+#VSCODE files
+.vscode

@@ -1,0 +1,28 @@
+{
+    "server": {
+        "port": 9900
+    },
+    "logger": {
+        "appenders": {
+            "fileLog":
+            {
+                "type": "file",
+                "filename": "logs/server.log",
+                "maxLogSize": 2048000,
+                "backups": 3
+            },
+            "consoleLog": {
+                "type": "stdout"
+            }
+        },
+        "categories": {
+            "default": {
+                "appenders": ["fileLog", "consoleLog"],
+                "level": "debug"
+            }
+        }
+    },
+    "events": {
+        "maxEvents": 1000
+    }
+}

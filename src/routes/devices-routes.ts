@@ -34,9 +34,9 @@
 
 
 import * as express from 'express';
-import { RouteHandler, Operations } from '../route-handler';
+import { RouteHandler, Operations } from '../app-server/route-handler';
 import * as log4js from 'log4js';
-import { DeviceDataManager, Device } from '../data-manager/devce-data-manager';
+import { DeviceDataManager, Device } from '../data-manager/device-data-manager';
 
 
 /**
@@ -57,12 +57,7 @@ export class DevicesRoutes extends RouteHandler {
         this.setHandler(Operations.GET, '/', this.handleGetDevices.bind(this));
         this.setHandler(Operations.GET, '/:deviceId', this.handleGetDevice.bind(this));
        
-        DeviceDataManager.getInstance()
-            .then((result) => {
-                this.deviceDataManager = result;
-            }).catch((err) => {
-                throw err;
-            });
+        this.deviceDataManager = DeviceDataManager.getInstance();
     }
 
 

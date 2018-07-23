@@ -1,3 +1,4 @@
+
 /**
  * MIT License
  * 
@@ -32,14 +33,9 @@
  */
 
 import { readFile, writeFile } from "fs"
-import { Constants, DEVICE_TYPES } from '../common';
+import { Constants, DEVICE_TYPES, promisifiedReadFile, promisifiedWriteFile } from '../common/common';
 import * as log4js from 'log4js';
 import * as util from 'util'
-import { Gpio } from '../controllers/gpio';
-
-const logger = log4js.getLogger('DeviceDataManager');
-const promisifiedWriteFile = util.promisify(writeFile);
-const promisifiedReadFile = util.promisify(readFile);
 
 
 /**
@@ -65,7 +61,7 @@ export interface Device {
  * @class DeviceDataManager
  */
 export class DeviceDataManager {
-
+    private logger = log4js.getLogger('DeviceDataManager');
     private static deviceDataManager: DeviceDataManager;
     private deviceData: Array<Device>;
 
@@ -128,7 +124,7 @@ export class DeviceDataManager {
         try {
             await promisifiedWriteFile(Constants.deviceDataFileName, JSON.stringify(this.deviceData, null, 4));
         } catch (err) {
-            logger.error(`Failed to write device data ${err}`);
+            this.logger.error(`Failed to write device data ${err}`);
             throw err;
         }
     }
@@ -136,32 +132,37 @@ export class DeviceDataManager {
 
 
 
+
     /**
-     * Creates and instance of the DeviceDataManager and initializes it 
-     * from the devices data file
+     * Get an instance of the data manager
      *
      * @static
-     * @returns {Promise<DeviceDataManager>}
-     * @throws Error
+     * @returns {DeviceDataManager}
      * @memberof DeviceDataManager
      */
-    static async getInstance(): Promise<DeviceDataManager> {
-        if (DeviceDataManager.deviceDataManager) {
-            return DeviceDataManager.deviceDataManager;
-        }
-
-        try {
-            let data = await promisifiedReadFile(Constants.deviceDataFileName);
+    static  getInstance(): DeviceDataManager {
+        if (!DeviceDataManager.deviceDataManager) {        
             DeviceDataManager.deviceDataManager = new DeviceDataManager();
-            DeviceDataManager.deviceDataManager.deviceData = JSON.parse(data.toString());
-
-        } catch (error) {
-            logger.error('Failed to read device list', error);
-            throw error;
-
         }
+
         return DeviceDataManager.deviceDataManager;
     }
 
+
+    /**
+     * Load the device data from file
+     *
+     * @memberof DeviceDataManager
+     */
+    public async loadDeviceData() {
+        this.logger.debug('loadDeviceData()');
+        try {
+            let data = await promisifiedReadFile(Constants.deviceDataFileName);     
+            this.deviceData = JSON.parse(data.toString());
+        } catch (error) {
+            this.logger.error('Failed to read device list', error);
+            throw error;
+        }
+    }
 
 }

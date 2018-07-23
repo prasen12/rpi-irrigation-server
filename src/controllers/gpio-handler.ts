@@ -31,27 +31,46 @@
  * -----
  */
 
+import * as pigpio from "pigpio";
+
+
+/**
+ * GPIO Modes
+ *
+ * @export
+ * @enum {number}
+ */
 export enum GPIO_MODES {
-    INPUT = 0,
-    OUTPUT = 1,
-    INPUT_OUTPUT = 2
+    INPUT = pigpio.Gpio.INPUT,
+    OUTPUT = pigpio.Gpio.OUTPUT
 };
 
-export class Gpio {
+
+/**
+ * Wrapper over GPIO package
+ *
+ * @export
+ * @class GpioHandler
+ */
+export class GpioHandler {
     private pin: number;
     private mode: GPIO_MODES;
+    private _gpio: pigpio.Gpio;
 
     constructor(pin: number, mode: GPIO_MODES) {
         this.pin = pin;
         this.mode = mode;
+        this._gpio = new pigpio.Gpio(this.pin, {
+            mode: pigpio.Gpio.OUTPUT
+        })
     }
 
     digitalWrite(state: number): void {
-        // call gpio lib
+        this._gpio.digitalWrite(state);
     }
 
     digitalRead():string {
-        // call gpio lib
-        return "off";
+        let n = this._gpio.digitalRead();
+        return n === 1 ? "off" : "on";
     }
 }

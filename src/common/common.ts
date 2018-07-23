@@ -31,14 +31,24 @@
  * -----
  */
 
+import * as util from 'util'
+import {readFile, writeFile} from 'fs';
+
+
 
 export class Constants {
-    public static appRoot = __dirname;
-    public static deviceDataFileName = `${__dirname}/data/devices.json`;
-    public static resources = `${__dirname}/../resources`;
+    public static appRoot = `${__dirname}/..`;
+    public static deviceDataFileName = `${Constants.appRoot}/../data/devices.json`;
+    public static schedulesFileName = `${Constants.appRoot}/../data/schedules.json`;
+    public static eventLogDBName = `${Constants.appRoot}/../data/eventlog.sqlite`;
 
-}
+};
+
+export const Settings = require(`${Constants.appRoot}/../config/settings.json`);
 
 export enum DEVICE_TYPES {
     IRRIGATION = "irrigation"
-}
+};
+
+export const promisifiedReadFile = util.promisify(readFile);
+export const promisifiedWriteFile = util.promisify(writeFile);

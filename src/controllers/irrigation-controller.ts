@@ -32,40 +32,88 @@
  */
 
 import * as log4js from 'log4js';
-import { DeviceDataManager, Device } from '../data-manager/devce-data-manager';
-import { DEVICE_TYPES } from '../common';
-import { GPIO_MODES, Gpio } from './gpio';
+import { DeviceDataManager, Device } from '../data-manager/device-data-manager';
+import { DEVICE_TYPES } from '../common/common';
+import { GPIO_MODES, GpioHandler } from './gpio-handler';
+import { EventLogger, EventTypes } from '../events/event-logger';
 
 
+/**
+ * Irrigation station
+ *
+ * @export
+ * @interface Station
+ */
 export interface Station {
     device: Device,
-    gpio: Gpio;
+    gpio: GpioHandler;
     timer?: NodeJS.Timer;
 }
 
+/**
+ * Status response 
+ *
+ * @export
+ * @interface StationStatus
+ */
 export interface StationStatus {
     id: string;
     status: string;
 }
 
+/**
+ * Controller for managing irrigation stations
+ * 
+ * Used as a singleton
+ *
+ * @export
+ * @class IrrigationController
+ */
 export class IrrigationController {
     private logger: log4js.Logger;
     private stations: Array<Station>;
+    private static instance: IrrigationController;
+    private eventLogger: EventLogger;
 
     constructor() {
         this.logger = log4js.getLogger('IrrigationController');
         this.stations = new Array<Station>();
+        this.eventLogger = EventLogger.getInstance();
     }
 
+
+    /**
+     * Get an instance of IrrigationController
+     *
+     * @static
+     * @returns {IrrigationController}
+     * @memberof IrrigationController
+     */
+    public static getInstance(): IrrigationController {
+        if (!IrrigationController.instance) {
+            IrrigationController.instance = new IrrigationController();
+        }
+        return IrrigationController.instance;
+    }
+
+
+    /**
+     * Initializes the controller and and the GPIO pins
+     * using the devices data
+     *
+     * @memberof IrrigationController
+     * 
+     */
     async init() {
+        this.logger.debug('init()');
         try {
-            let dm = await DeviceDataManager.getInstance();
+            let dm = DeviceDataManager.getInstance();
             let devices = dm.getDevices(DEVICE_TYPES.IRRIGATION);
             devices.forEach(device => {
                 this.logger.debug(`Initializing GPIO pin ${device.gpioPin} for ${device.name}`);
                 this.stations.push({
                     device: device,
-                    gpio: new Gpio(device.gpioPin, GPIO_MODES.OUTPUT)
+                    gpio: new GpioHandler(device.gpioPin, GPIO_MODES.OUTPUT)
                 });
                 this.switchOnOff(device.id, false);
             });
@@ -73,11 +121,20 @@ export class IrrigationController {
             this.logger.error('IrrigationController: init() failed');
             throw (error);
         }
-        
+
     }
 
-    switchOnOff(stationId: string, on: boolean) {
-        this.logger.info(`Turning station ${stationId} ${on ? "ON" : "OFF"}`);
+
+    /**
+     * Turn off/on an irrigation station
+     *
+     * @param {string} stationId
+     * @param {boolean} on
+     * @memberof IrrigationController
+     */
+    async switchOnOff(stationId: string, on: boolean) {
+        let action = on ? "ON" : "OFF";
+        this.logger.info(`Turning station ${stationId} ${action}`);
 
         let station = this.stations.find(s => s.device.id === stationId);
         if (station === undefined) {
@@ -86,24 +143,54 @@ export class IrrigationController {
 
         // Cancel timer if set
         if (station.timer) {
+            this.logger.debug('Cancelling active timer');
             clearTimeout(station.timer);
             delete station.timer;
         }
 
         station.gpio.digitalWrite((on === true ? 0 : 1));
 
+        try {
+            await this.eventLogger.addEvent({
+                eventTime: new Date().getTime(),
+                eventSource: this.constructor.name,
+                text: `Irrigation station ${stationId} turned ${action}`,
+                type: EventTypes.INFO,
+                deviceId: stationId
+            });
+        } catch (error) {
+            this.logger.debug('Failed to write event');
+        }
+
+
         // Start timer to force a shut off after maxTime
         if (on && station.device.maxTime) {
             this.logger.info(`Setting timeout for ${stationId} to ${station.device.maxTime} minutes`);
             station.timer = setTimeout(args => {
-                this.logger.info(`Station on for more than maxTime of ${args.maxTime} minutes, turning it off.`);
+                this.logger.info(`Station on for more than maxTime of ${args.device.maxTime} minutes, turning it off.`);
                 args.gpio.digitalWrite(1);
+                this.eventLogger.addEvent({
+                    eventTime: new Date().getTime(),
+                    eventSource: this.constructor.name,
+                    text: `${stationId} on for more than maxTime of ${args.device.maxTime} minutes, turning it off.`,
+                    type: EventTypes.WARNING,
+                    deviceId: stationId
+                }).catch(err => this.logger.debug('Failed to write event'))
+
             }, (station.device.maxTime * (1000 * 60)), station);
-        }        
+        }
     }
 
-    getStatus(stationId: string):StationStatus|undefined {
-        let status:StationStatus|undefined = undefined;
+
+    /**
+     * Return the current status of a station
+     *
+     * @param {string} stationId
+     * @returns {(StationStatus|undefined)}
+     * @memberof IrrigationController
+     */
+    getStatus(stationId: string): StationStatus | undefined {
+        let status: StationStatus | undefined = undefined;
 
         this.logger.debug(`Getting status for station ${stationId}`);
 
@@ -117,23 +204,35 @@ export class IrrigationController {
         } else {
             this.logger.debug(`Unable to find station with id ${stationId}`);
         }
-        
+
         return status;
-        
+
     }
 
-    getStations():Array<Station> {
+    /**
+     * Return a list of registered irrigation stations
+     *
+     * @returns {Array<Station>}
+     * @memberof IrrigationController
+     */
+    getStations(): Array<Station> {
         return this.stations;
     }
 
-    
 
-    getAllStatus():Array<StationStatus> {
+
+    /**
+     * Get status of all the stations
+     *
+     * @returns {Array<StationStatus>}
+     * @memberof IrrigationController
+     */
+    getAllStatus(): Array<StationStatus> {
         let status = new Array<StationStatus>();
 
         this.stations.forEach(station => {
             status.push({
-                id:  station.device.id,
+                id: station.device.id,
                 status: station.gpio.digitalRead()
             });
         });

@@ -26,7 +26,7 @@
  * Author: Prasen Palvankar
  * 
  * -----
- * Last Modified: Sat Jul 14 2018
+ * Last Modified: Tue Jul 24 2018
  * Modified By: Prasen Palvankar
  * -----
  */
@@ -51,7 +51,7 @@ export class DevicesRoutes extends RouteHandler {
     private deviceDataManager: DeviceDataManager;
 
     constructor() {
-        super('/devices');
+        super('/api/devices');
         this.logger = log4js.getLogger('DevicesRoute');
         this.setHandler(Operations.POST, '/', this.handlePostDevice.bind(this));
         this.setHandler(Operations.GET, '/', this.handleGetDevices.bind(this));

@@ -1,4 +1,4 @@
-import { EventLogger } from './../events/event-logger';
+import { EventLogger } from '../events/event-logger';
 /*
  * MIT License
  * 
@@ -49,7 +49,7 @@ export class EventsRoutes extends RouteHandler {
     private eventLogger: EventLogger;
 
     constructor() {
-        super('/events');
+        super('/api/events');
         this.logger = log4js.getLogger('EventsRoutes');
         this.eventLogger = EventLogger.getInstance();
         this.setHandler(Operations.GET, '/', this.handleGetEvents.bind(this));

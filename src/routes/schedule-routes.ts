@@ -49,7 +49,7 @@ export class ScheduleRoutes extends RouteHandler {
     private scheduleManager: ScheduleManager;
 
     constructor() {
-        super('/schedules');
+        super('/api/schedules');
         this.logger = log4js.getLogger('SchedulesRoute');
         this.scheduleManager = ScheduleManager.getInstance();
         this.setHandler(Operations.PUT, '/:name', this.handleUpdateSchedule.bind(this));

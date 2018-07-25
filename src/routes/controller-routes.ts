@@ -26,7 +26,7 @@
  * Author: Prasen Palvankar
  * 
  * -----
- * Last Modified: Sat Jul 14 2018
+ * Last Modified: Tue Jul 24 2018
  * Modified By: Prasen Palvankar
  * -----
  */
@@ -49,7 +49,7 @@ export class ControllerRoutes extends RouteHandler {
     private logger: log4js.Logger;
     private irrigationController: IrrigationController;
     constructor() {
-        super('/controller');
+        super('/api/controller');
         this.logger = log4js.getLogger('ControllerRoutes');
         this.setHandler(Operations.GET, '/stations', this.handleGetStations.bind(this));
         this.setHandler(Operations.GET, '/stations/:id/status', this.handleGetStationStatus.bind(this));

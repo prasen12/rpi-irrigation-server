@@ -26,7 +26,7 @@
  * Author: Prasen Palvankar
  * 
  * -----
- * Last Modified: Thu Jul 12 2018
+ * Last Modified: Tue Jul 24 2018
  * Modified By: Prasen Palvankar
  * -----
  */
@@ -42,12 +42,12 @@ import * as morgan from "morgan";
 
 import { RouteHandler } from './route-handler';
 
-export class Server {
+export class AppServer {
     private app: express.Application; 
     private logger: log4js.Logger;
 
     constructor() { 
-        this.logger = log4js.getLogger("server");
+        this.logger = log4js.getLogger(this.constructor.name);
         this.app = express();
 
         this.app.use(morgan('dev'));

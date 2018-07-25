@@ -36,7 +36,7 @@ import { readFile, writeFile } from 'fs';
 import * as util from 'util';
 import { Constants, promisifiedReadFile, promisifiedWriteFile } from "../common/common";
 import * as log4js from "log4js";
-import { IrrigationController } from './../controllers/irrigation-controller';
+import { IrrigationController } from '../controllers/irrigation-controller';
 
 /**
  * A schedule

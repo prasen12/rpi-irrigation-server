@@ -31,10 +31,10 @@
  * -----
  */
 
-import { promisifiedReadFile, Constants, Settings } from '../common/common';
+import * as process from 'process';
+import { Constants } from '../common/common';
 import * as log4js from 'log4js';
 import { Database } from "sqlite3";
-
 const EVENTS_TABLE_NAME = 'RPI_EVENT_TABLE';
 
 /**
@@ -51,6 +51,15 @@ export class EventLogger {
 
     constructor() {
         this.logger = log4js.getLogger('EventLogger');
+        process.on('exit', () => {
+            try {
+                if (this.eventsDB) {
+                    this.eventsDB.close();
+                }
+            } catch (err) {
+                
+            }
+        });
     }
 
     public static getInstance(): EventLogger {

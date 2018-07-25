@@ -26,7 +26,7 @@
  * Author: Prasen Palvankar
  * 
  * -----
- * Last Modified: Sun Jul 15 2018
+ * Last Modified: Tue Jul 24 2018
  * Modified By: Prasen Palvankar
  * -----
  */
@@ -38,7 +38,7 @@ import { RouteHandler, Operations } from '../app-server/route-handler';
 import * as log4js from 'log4js';
 import { SystemInfo } from '../services/sys-info';
 import * as express from 'express';
-
+import { SystemEventEmitter, SystemEventTypes } from '../services/sys-events';
 
 /**
  * Handle requests for /system
@@ -50,13 +50,15 @@ import * as express from 'express';
 export class SystemRoutes extends RouteHandler {
     private logger: log4js.Logger;
     private sysInfo: SystemInfo;
+    private eventEmitter: SystemEventEmitter;
 
     constructor() {
-        super('/system');
+        super('/api/system');
         this.logger = log4js.getLogger('SystemRoutes');
         this.sysInfo = new SystemInfo();
-
+        this.eventEmitter = SystemEventEmitter.getInstance();
         this.setHandler(Operations.GET, '/info', this.handleGetSysInfo.bind(this));
+        this.setHandler(Operations.POST, '/control', this.handlePostControl.bind(this));
     }
 
 
@@ -80,5 +82,24 @@ export class SystemRoutes extends RouteHandler {
                 uptime: this.sysInfo.upTime
             }
         });
+    }
+
+    handlePostControl(req: express.Request, res: express.Response) {
+        this.logger.debug('handlePostOperation()');
+        switch (req.body.action) {
+            case 'reboot': {
+                this.eventEmitter.emit(SystemEventTypes.REBOOT);
+                res.status(201).json({ status: "OK" });
+                break;
+            }
+            case 'restart': {
+                this.eventEmitter.emit(SystemEventTypes.RESTART);
+                res.status(201).json({ status: 'OK' });
+                break;
+            }
+            default:
+                res.status(400).json({ status: 'ERROR', error: `Invalid action ${req.params.action}` });
+        }
+
     }
 }

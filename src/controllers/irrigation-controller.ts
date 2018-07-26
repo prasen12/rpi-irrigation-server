@@ -48,6 +48,10 @@ export interface Station {
     device: Device,
     gpio: GpioHandler;
     timer?: NodeJS.Timer;
+    lastEvent: {
+        eventTime: number;
+        action: string;
+    }
 }
 
 /**
@@ -113,6 +117,10 @@ export class IrrigationController {
                 this.logger.debug(`Initializing GPIO pin ${device.gpioPin} for ${device.name}`);
                 this.stations.push({
                     device: device,
+                    lastEvent: {
+                        eventTime: new Date().getTime(),
+                        action: "Initialized"
+                    },
                     gpio: new GpioHandler(device.gpioPin, GPIO_MODES.OUTPUT)
                 });
                 this.switchOnOff(device.id, false);
@@ -151,8 +159,10 @@ export class IrrigationController {
         station.gpio.digitalWrite((on === true ? 0 : 1));
 
         try {
+            station.lastEvent.eventTime = new Date().getTime();
+            station.lastEvent.action = `Turned ${action}`;
             await this.eventLogger.addEvent({
-                eventTime: new Date().getTime(),
+                eventTime: station.lastEvent.eventTime,
                 eventSource: this.constructor.name,
                 text: `Irrigation station ${stationId} turned ${action}`,
                 type: EventTypes.INFO,

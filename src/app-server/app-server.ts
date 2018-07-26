@@ -57,6 +57,7 @@ export class AppServer {
     public listen(port: number) {
         this.logger.info(`Listening on port ${port}`);
         this.app.listen(port);
+        
     }
 
     public addRoute(routeHandler: RouteHandler) {

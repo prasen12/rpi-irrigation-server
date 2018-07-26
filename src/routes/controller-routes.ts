@@ -1,3 +1,4 @@
+import { StationStatus } from './../controllers/irrigation-controller';
 /**
  * MIT License
  * 
@@ -57,7 +58,7 @@ export class ControllerRoutes extends RouteHandler {
         this.irrigationController = IrrigationController.getInstance();
     }
 
-    
+
     /**
      * Get all stations
      *
@@ -68,11 +69,38 @@ export class ControllerRoutes extends RouteHandler {
      */
     private handleGetStations(req: express.Request, res: express.Response) {
         this.logger.debug(`handleGetStattions`);
+        let stations = this.irrigationController.getStations();
+        let data = Array<{
+            id: string,
+            name: string,
+            type: string,
+            enabled: boolean,
+            maxTime: number,
+            gpioPin: number,
+            lastEvent: {
+                eventTime: number;
+                action: string;
+            },
+            switchedOn: boolean
+        }>();
+        for (let station of stations) {
+            let status =  this.irrigationController.getStatus(station.device.id);
+            data.push({
+                id: station.device.id,
+                name: station.device.name,
+                type: station.device.type,
+                enabled: station.device.enabled,
+                maxTime: station.device.maxTime,
+                gpioPin: station.device.gpioPin,
+                lastEvent: station.lastEvent,
+                switchedOn: status === undefined ? false : (status.status === 'on')
+            })
+        }
         res.status(200).json({
             status: "OK",
-            data: this.irrigationController.getStations()
+            data: data
         })
-     
+
     }
 
 
@@ -99,7 +127,7 @@ export class ControllerRoutes extends RouteHandler {
             });
         }
     }
-    
+
 
     /**
      * Turn a station on or off
@@ -124,7 +152,7 @@ export class ControllerRoutes extends RouteHandler {
             this.irrigationController.switchOnOff(req.params.id, req.body.action.toLowerCase() === 'on');
             res.status(201).json({
                 status: "OK",
-                data: {stationId: req.params.id, status: req.body.action}
+                data: { stationId: req.params.id, status: req.body.action }
             });
         } catch (error) {
             this.logger.error(error);
@@ -133,6 +161,6 @@ export class ControllerRoutes extends RouteHandler {
                 error: error
             });
         }
-    }   
-    
+    }
+
 }

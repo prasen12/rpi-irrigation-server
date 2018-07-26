@@ -33,7 +33,6 @@
 
 
 import * as process from 'process';
-import * as log4js from 'log4js';
 
 import {SystemEventEmitter, SystemEventTypes} from './services/sys-events';
 import { Server } from './server';

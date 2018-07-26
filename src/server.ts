@@ -45,61 +45,58 @@ import { ScheduleManager } from './data-manager/schedule-manager';
 
 import { Settings } from './common/common';
 import { EventsRoutes } from './routes/events-routes';
-import { EventEmitter } from '../node_modules/@types/events';
 
-export class Server  {
+export class Server {
     private logger: log4js.Logger;
 
-    constructor() {        
-        log4js.configure(Settings.this.logger);
+    constructor() {
+        log4js.configure(Settings.logger);
         this.logger = log4js.getLogger(this.constructor.name);
-        
+
     }
 
-    run() {
-        this.logger.info('Initializing application server');
-        let server = new AppServer();
-        // Initialize data managers and controllers
-        this.logger.info('Initializing data managers and controllers');
-        let scheduleManager = ScheduleManager.getInstance();
-        let deviceDataManger = DeviceDataManager.getInstance();
-        let irrigationController = IrrigationController.getInstance();
-        let eventLogger = EventLogger.getInstance();
-        deviceDataManger.loadDeviceData()
-            .then(() => {
-                this.logger.info('Device data manager initialized');
-                return eventLogger.init();
-            })
-            .then(() => {
-                this.logger.info('Event Logger initialized');
-                return irrigationController.init();
-            })
-            .then(() => {
-                this.logger.debug('Irrigation controller initialized');
-                return scheduleManager.loadSchedules()
-            })
-            .then(() => {
-                this.logger.debug('Schedule data manager initialized');
-                server.addRoute(new DevicesRoutes());
-                server.addRoute(new ControllerRoutes());
-                server.addRoute(new SystemRoutes());
-                server.addRoute(new ScheduleRoutes());
-                server.addRoute(new EventsRoutes());
-                let port = process.env.PORT === undefined ? Settings.server.port : Number(process.env.PORT);
-                server.listen(port);
-                eventLogger.addEvent({
-                    eventSource: 'System',
-                    eventTime: new Date().getTime(),
-                    text: 'Server initialized',
-                    type: EventTypes.INFO
-                }).catch(err => {
-                    throw err;
-                });
-            }).catch((err) => {
-                this.logger.error('Failed to initialize data managers');
-                this.logger.error(err);
-                throw err;
+    async run() {
+        try {
+            this.logger.info('Initializing application server');
+            let server = new AppServer();
+            // Initialize data managers and controllers
+            this.logger.info('Initializing data managers and controllers');
+            let scheduleManager = ScheduleManager.getInstance();
+            let deviceDataManger = DeviceDataManager.getInstance();
+            let irrigationController = IrrigationController.getInstance();
+            let eventLogger = EventLogger.getInstance();
+            await deviceDataManger.loadDeviceData()
+            this.logger.info('Device data manager initialized');
+
+            await eventLogger.init();
+            this.logger.info('Event Logger initialized');
+
+            await irrigationController.init();
+            this.logger.debug('Irrigation controller initialized');
+
+            await scheduleManager.loadSchedules()
+            this.logger.debug('Schedule data manager initialized');
+
+            server.addRoute(new DevicesRoutes());
+            server.addRoute(new ControllerRoutes());
+            server.addRoute(new SystemRoutes());
+            server.addRoute(new ScheduleRoutes());
+            server.addRoute(new EventsRoutes());
+
+            let port = process.env.PORT === undefined ? Settings.server.port : Number(process.env.PORT);
+            server.listen(port);            
+            await eventLogger.addEvent({
+                eventSource: 'System',
+                eventTime: new Date().getTime(),
+                text: 'Server initialized',
+                type: EventTypes.INFO
             });
+
+        } catch (err) {
+            this.logger.error('Failed to initialize data managers');
+            this.logger.error(err);
+            throw err;
+        };
     }
 }
 

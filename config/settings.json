@@ -2,6 +2,9 @@
     "server": {
         "port": 9900
     },
+    "devices": {
+        "maxOnTime":  60
+    },
     "logger": {
         "appenders": {
             "fileLog":

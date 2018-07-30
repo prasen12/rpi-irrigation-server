@@ -1,3 +1,4 @@
+import { Schedule } from './schedule-manager';
 /*
  * MIT License
  * 
@@ -26,7 +27,7 @@
  * Author: Prasen Palvankar
  * 
  * -----
- * Last Modified: Sun Jul 22 2018
+ * Last Modified: Sat Jul 28 2018
  * Modified By: Prasen Palvankar
  * -----
  */
@@ -49,18 +50,9 @@ export interface Schedule {
     description: string,
     deviceId: string,
     rule: node_schedule.RecurrenceRule,
-    action: string
-};
-
-
-/**
- * Scheduled Job
- *
- * @interface ScheduledJob
- */
-interface ScheduledJob {
-    name: string,
-    job: node_schedule.Job
+    action: string,
+    active: boolean,
+    duration: number
 };
 
 
@@ -71,16 +63,16 @@ interface ScheduledJob {
  * @class ScheduleManager
  */
 export class ScheduleManager {
-    private schedules: Array<Schedule>;
+    private schedules: Map<string, Schedule>;
     private logger: log4js.Logger;
-    private scheduledJobs: Array<ScheduledJob>;
+    private scheduledJobs: Map<string, node_schedule.Job>;
     static instance: ScheduleManager;
-    private  irrigationController: IrrigationController;
+    private irrigationController: IrrigationController;
 
     constructor() {
-        this.schedules = new Array<Schedule>();
+        this.schedules = new Map<string, Schedule>();
         this.logger = log4js.getLogger('ScheduleManager');
-        this.scheduledJobs = new Array<ScheduledJob>();
+        this.scheduledJobs = new Map<string, node_schedule.Job>();
         this.irrigationController = IrrigationController.getInstance();
     }
 
@@ -113,15 +105,15 @@ export class ScheduleManager {
         this.logger.debug(`Executing scheduled action "${schedule.action}" for schedule = "${schedule.name}"`);
         switch (schedule.action) {
             case "on": {
-                this.irrigationController.switchOnOff(schedule.deviceId, true);                
+                this.irrigationController.switchOnOff(schedule.deviceId, true, schedule.duration);
                 break;
             }
             case "off": {
-                this.irrigationController.switchOnOff(schedule.deviceId, false);                
+                this.irrigationController.switchOnOff(schedule.deviceId, false);
                 break;
             }
             default: {
-                this.logger.warn(`Invalid scheduled action "${schedule.action}", ignored"`);                
+                this.logger.warn(`Invalid scheduled action "${schedule.action}", ignored"`);
             }
         }
     }
@@ -135,13 +127,13 @@ export class ScheduleManager {
      */
     private scheduleJobs(): void {
         this.logger.debug('scheduleJobs()');
-        for (let schedule of this.schedules) {
-            if (schedule.rule) {
+        this.schedules.forEach( (schedule) => {
+            if (schedule.rule && schedule.active) {
                 this.scheduleJob(schedule);
             }
-        }
+        });
+        
     }
-
 
     /**
      * Schedule a single job and add it to the list of jobs
@@ -153,7 +145,7 @@ export class ScheduleManager {
     private scheduleJob(schedule: Schedule) {
         this.logger.debug(`Scheduling job "${schedule.name}"`);
         let scheduledJob = node_schedule.scheduleJob(schedule.rule, this.execScheduledAction.bind(this, schedule));
-        this.scheduledJobs.push({ name: schedule.name, job: scheduledJob });
+        this.scheduledJobs.set(schedule.name, scheduledJob);        
     }
 
 
@@ -166,12 +158,37 @@ export class ScheduleManager {
      */
     private rescheduleJob(schedule: Schedule): void {
         this.logger.debug(`rescheduleJob("${schedule.name}")`);
-        let scheduledJob = this.scheduledJobs.find(e => e.name === schedule.name);
+        let scheduledJob = this.scheduledJobs.get(schedule.name);
         if (scheduledJob) {
-            scheduledJob.job.reschedule(schedule.rule);
+            scheduledJob.reschedule(schedule.rule);
         }
     }
 
+
+    /**
+     * Cancel job for a deactivated schedule
+     *
+     * @private
+     * @param {Schedule} schedule
+     * @memberof ScheduleManager
+     */
+    private cancelJob(schedule: Schedule): void {
+        this.logger.debug(`cancelJob("${schedule.name}")`);
+        let scheduledJob = this.scheduledJobs.get(schedule.name);
+        if (scheduledJob) {
+            scheduledJob.cancel(false);
+        }
+    }
+
+    private deleteJob(schedule: Schedule): void {
+        this.logger.debug(`deleteJob("${schedule.name}")`);
+        let scheduledJob = this.scheduledJobs.get(schedule.name);
+        if (scheduledJob) {
+            scheduledJob.cancel(false);
+            this.scheduledJobs.delete(schedule.name);
+
+        }
+    }
 
     /**
      * Load schedules from schedules.json
@@ -183,7 +200,8 @@ export class ScheduleManager {
         this.logger.debug('loadSchedules()');
         try {
             let data = await promisifiedReadFile(Constants.schedulesFileName);
-            this.schedules = JSON.parse(data.toString());
+            let schedArray:Array<Schedule> = JSON.parse(data.toString());
+            this.schedules = new Map(schedArray.map( (e):[string, Schedule] => [e.name, e]));
             this.scheduleJobs();
             return this.schedules;
         } catch (err) {
@@ -200,10 +218,28 @@ export class ScheduleManager {
      * @returns {Array<Schedule>}
      * @memberof ScheduleManager
      */
-    getSchedules(): Array<Schedule> {        
-        return this.schedules;
+    getSchedules(): Array<Schedule> {
+        return Array.from(this.schedules.values());
     }
 
+
+
+    /**
+     * Get count of schedules for device
+     *
+     * @param {string}  deviceId
+     * @returns {number}
+     * @memberof ScheduleManager
+     */
+    getScheduleCount(deviceId: string): number {
+        let count = 0;
+        this.schedules.forEach(schedule => {
+            if (schedule.deviceId === deviceId) {
+                count++;
+            }
+        });
+        return count;
+    }
 
     /**
      * Return a schedule
@@ -213,7 +249,7 @@ export class ScheduleManager {
      * @memberof ScheduleManager
      */
     getSchedule(name: string): Schedule | undefined {
-        return this.schedules.find(e => e.name === name);
+        return this.schedules.get(name);
     }
 
 
@@ -228,16 +264,31 @@ export class ScheduleManager {
         let schedule = this.getSchedule(newSchedule.name);
         if (schedule) {
             Object.assign(schedule, newSchedule);
-            // Reschedule to effect any rules that may have changed
-            this.rescheduleJob(newSchedule);
+
+            if (newSchedule.active) {
+                // Reschedule to effect any rules that may have changed
+                this.rescheduleJob(newSchedule);
+            } else {
+                // Cancel schedule if deactivated
+                this.cancelJob(newSchedule);
+            }
+
         } else {
-            this.schedules.push(newSchedule);         
-            this.scheduleJob(newSchedule);   
+            this.schedules.set(newSchedule.name, newSchedule);
+            this.scheduleJob(newSchedule);
         }
         await this.saveSchedules();
 
     }
 
+    async deleteSchedule(name: string) {
+        this.logger.debug('deleteSchedule()');
+        let schedule = this.schedules.get(name);
+        if (schedule) {
+            this.schedules.delete(name);
+        }
+        await this.saveSchedules();
+    }
 
     /**
      * Persist the schedules to schedules.json
@@ -249,7 +300,8 @@ export class ScheduleManager {
     async saveSchedules() {
         this.logger.debug('saveSchedules()');
         try {
-            await promisifiedWriteFile(Constants.schedulesFileName, JSON.stringify(this.schedules, null, 4));
+            let schedArray = Array.from(this.schedules.values());
+            await promisifiedWriteFile(Constants.schedulesFileName, JSON.stringify(schedArray, null, 4));
         } catch (err) {
             this.logger.error(err);
             let e = new Error();
@@ -282,7 +334,9 @@ export class ScheduleManager {
                 name: name,
                 description: "",
                 deviceId: deviceId,
-                action: "",
+                action: "off",
+                duration: 0,
+                active: false,
                 rule: new node_schedule.RecurrenceRule()
             }
         }

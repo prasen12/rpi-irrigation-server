@@ -26,7 +26,7 @@
  * Author: Prasen Palvankar
  * 
  * -----
- * Last Modified: Sun Jul 22 2018
+ * Last Modified: Fri Jul 27 2018
  * Modified By: Prasen Palvankar
  * -----
  */
@@ -53,6 +53,7 @@ export class ScheduleRoutes extends RouteHandler {
         this.logger = log4js.getLogger('SchedulesRoute');
         this.scheduleManager = ScheduleManager.getInstance();
         this.setHandler(Operations.PUT, '/:name', this.handleUpdateSchedule.bind(this));
+        this.setHandler(Operations.DELETE, '/:name', this.handleDeleteSchedule.bind(this));
         this.setHandler(Operations.GET, '/', this.handleGetSchedules.bind(this));
         this.setHandler(Operations.GET, '/:name', this.handleGetSchedule.bind(this));
         this.setHandler(Operations.GET, '/:deviceId/:name/new', this.handleCreateNewSchedule.bind(this));
@@ -78,6 +79,21 @@ export class ScheduleRoutes extends RouteHandler {
 
     }
 
+    private handleDeleteSchedule(req: express.Request, res: express.Response) {
+        this.logger.debug(`handleUpdateSchedule("${req.params.name}")`);
+        try {
+            this.scheduleManager.deleteSchedule(req.params.name);
+            res.status(202).json({status:"OK"});
+        } catch (error) {
+            res.status(500).json( {
+                status: "ERROR",
+                error: error
+            });
+        }
+       
+
+    }
+    
     private handleGetSchedules(req: express.Request, res: express.Response) {
         this.logger.debug(`handleGetSchedules()`);
         res.status(200).json({

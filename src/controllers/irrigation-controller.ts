@@ -36,6 +36,7 @@ import { DeviceDataManager, Device } from '../data-manager/device-data-manager';
 import { DEVICE_TYPES } from '../common/common';
 import { GPIO_MODES, GpioHandler } from './gpio-handler';
 import { EventLogger, EventTypes } from '../events/event-logger';
+import { Settings } from './../common/common';
 
 
 /**
@@ -138,9 +139,10 @@ export class IrrigationController {
      *
      * @param {string} stationId
      * @param {boolean} on
+     * @param {number} [duration]
      * @memberof IrrigationController
      */
-    async switchOnOff(stationId: string, on: boolean) {
+    async switchOnOff(stationId: string, on: boolean, duration?: number) {
         let action = on ? "ON" : "OFF";
         this.logger.info(`Turning station ${stationId} ${action}`);
 
@@ -173,21 +175,24 @@ export class IrrigationController {
         }
 
 
-        // Start timer to force a shut off after maxTime
+        // Start timer for duration
+        let timeout = duration? duration : Settings.devices.maxOnTime;
         if (on && station.device.maxTime) {
-            this.logger.info(`Setting timeout for ${stationId} to ${station.device.maxTime} minutes`);
+            this.logger.info(`Setting duration for ${stationId} to ${timeout} minutes`);
             station.timer = setTimeout(args => {
-                this.logger.info(`Station on for more than maxTime of ${args.device.maxTime} minutes, turning it off.`);
+                this.logger.info(`Duration of ${args.device.maxTime} minutes reached, turning it off.`);
                 args.gpio.digitalWrite(1);
+                args.lastEvent.eventTime = new Date().getTime();
+                args.lastEvent.action = 'Turned Off';
                 this.eventLogger.addEvent({
                     eventTime: new Date().getTime(),
                     eventSource: this.constructor.name,
-                    text: `${stationId} on for more than maxTime of ${args.device.maxTime} minutes, turning it off.`,
-                    type: EventTypes.WARNING,
+                    text: `Turning off ${stationId}, duration of ${timeout} minutes reached.`,
+                    type: EventTypes.INFO,
                     deviceId: stationId
                 }).catch(err => this.logger.debug('Failed to write event'))
 
-            }, (station.device.maxTime * (1000 * 60)), station);
+            }, (timeout * (1000 * 60)), station);
         }
     }
 

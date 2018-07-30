@@ -1,3 +1,4 @@
+import { ScheduleManager } from './../data-manager/schedule-manager';
 import { StationStatus } from './../controllers/irrigation-controller';
 /**
  * MIT License
@@ -49,6 +50,7 @@ import { IrrigationController } from '../controllers/irrigation-controller';
 export class ControllerRoutes extends RouteHandler {
     private logger: log4js.Logger;
     private irrigationController: IrrigationController;
+    private scheduleManager: ScheduleManager;
     constructor() {
         super('/api/controller');
         this.logger = log4js.getLogger('ControllerRoutes');
@@ -56,6 +58,7 @@ export class ControllerRoutes extends RouteHandler {
         this.setHandler(Operations.GET, '/stations/:id/status', this.handleGetStationStatus.bind(this));
         this.setHandler(Operations.PUT, '/stations/:id/operation', this.handleStationOperation.bind(this));
         this.irrigationController = IrrigationController.getInstance();
+        this.scheduleManager = ScheduleManager.getInstance();
     }
 
 
@@ -81,7 +84,8 @@ export class ControllerRoutes extends RouteHandler {
                 eventTime: number;
                 action: string;
             },
-            switchedOn: boolean
+            switchedOn: boolean,
+            scheduleCount: number
         }>();
         for (let station of stations) {
             let status =  this.irrigationController.getStatus(station.device.id);
@@ -93,7 +97,8 @@ export class ControllerRoutes extends RouteHandler {
                 maxTime: station.device.maxTime,
                 gpioPin: station.device.gpioPin,
                 lastEvent: station.lastEvent,
-                switchedOn: status === undefined ? false : (status.status === 'on')
+                switchedOn: status === undefined ? false : (status.status === 'on'),
+                scheduleCount: this.scheduleManager.getScheduleCount(station.device.id)
             })
         }
         res.status(200).json({

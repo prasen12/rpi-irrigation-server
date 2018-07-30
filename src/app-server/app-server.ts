@@ -39,6 +39,7 @@ import * as express from "express";
 import * as bodyParser from "body-parser";
 import * as log4js from "log4js";
 import * as morgan from "morgan";
+import * as cors from 'cors';
 
 import { RouteHandler } from './route-handler';
 
@@ -49,7 +50,7 @@ export class AppServer {
     constructor() { 
         this.logger = log4js.getLogger(this.constructor.name);
         this.app = express();
-
+        this.app.use(cors());
         this.app.use(morgan('dev'));
         this.app.use(bodyParser.json());
         this.app.use(bodyParser.urlencoded({ extended: false }));

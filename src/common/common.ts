@@ -33,14 +33,19 @@
 
 import * as util from 'util'
 import {readFile, writeFile} from 'fs';
-
+import * as process from 'process';
 
 
 export class Constants {
     public static appRoot = `${__dirname}/..`;
+    public static webAppRoot = `${process.env['HOME']}/Projects/rpi-irrigation/webapp/www`
     public static deviceDataFileName = `${Constants.appRoot}/../data/devices.json`;
     public static schedulesFileName = `${Constants.appRoot}/../data/schedules.json`;
     public static eventLogDBName = `${Constants.appRoot}/../data/eventlog.sqlite`;
+
+    p() {
+        process
+    }
 
 };
 

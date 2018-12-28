@@ -1,7 +1,3 @@
-import { EventLogger, EventTypes } from './events/event-logger';
-import { IrrigationController } from './controllers/irrigation-controller';
-import { ScheduleRoutes } from './routes/schedule-routes';
-import { DeviceDataManager } from './data-manager/device-data-manager';
 /**
  * MIT License
  * 
@@ -45,7 +41,10 @@ import { ScheduleManager } from './data-manager/schedule-manager';
 
 import { Settings } from './common/common';
 import { EventsRoutes } from './routes/events-routes';
-
+import { EventLogger, EventTypes } from './events/event-logger';
+import { IrrigationController } from './controllers/irrigation-controller';
+import { ScheduleRoutes } from './routes/schedule-routes';
+import { DeviceDataManager } from './data-manager/device-data-manager';
 export class Server {
     private logger: log4js.Logger;
 

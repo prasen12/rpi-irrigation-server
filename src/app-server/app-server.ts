@@ -42,6 +42,7 @@ import * as morgan from "morgan";
 import * as cors from 'cors';
 
 import { RouteHandler } from './route-handler';
+import { Constants } from './../common/common';
 
 export class AppServer {
     private app: express.Application; 
@@ -54,7 +55,11 @@ export class AppServer {
         this.app.use(morgan('dev'));
         this.app.use(bodyParser.json());
         this.app.use(bodyParser.urlencoded({ extended: false }));
-    }
+        this.logger.info(`Serving webapp from ${Constants.webAppRoot}`);
+        this.app.use('/', express.static(Constants.webAppRoot));
+    
+
+    }   
     public listen(port: number) {
         this.logger.info(`Listening on port ${port}`);
         this.app.listen(port);
